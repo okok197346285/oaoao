@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Google 認證與會員管理</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(to bottom right, #4facfe, #00f2fe);
+            color: #333;
+            text-align: center;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #fff;
+            text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
+        }
+
+        button {
+            background: linear-gradient(to right, #6a11cb, #2575fc);
+            border: none;
+            color: #fff;
+            padding: 12px 24px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 25px;
+            margin: 10px;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        button:hover {
+            transform: scale(1.05);
+            box-shadow: 0 6px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        button:active {
+            transform: scale(0.95);
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2);
+        }
+
+        .user-info {
+            background: #fff;
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            display: inline-block;
+            text-align: left;
+            max-width: 400px;
+            width: 100%;
+        }
+
+        .user-info h2 {
+            margin-top: 0;
+        }
+
+        .user-info p {
+            margin: 5px 0;
+            font-size: 16px;
+        }
+
+        .user-info img {
+            display: block;
+            margin: 10px auto;
+            border-radius: 50%;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+        }
+    </style>
+</head>
+<body>
+    <h1>Firebase 會員認證與註冊</h1>
+    <button id="registerBtn">註冊</button>
+    <button id="loginBtn">登入</button>
+
+    <div class="user-info" id="userInfo" style="display: none;">
+        <h2>會員資訊</h2>
+        <p>姓名: <span id="name"></span></p>
+        <p>Email: <span id="email"></span></p>
+        <p>最後登入時間: <span id="lastLogin"></span></p>
+        <img id="profilePic" alt="Profile Picture">
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+      import { getAuth, signInWithPopup, GoogleAuthProvider } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+      import { getDatabase, ref, set, get, update } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-database.js";
+
+      // Firebase 設定
+      const firebaseConfig = {
+        apiKey: "AIzaSyB2tS2ZDLfqin7LfI6S8l9J_-iHFvzYf4M",
+        authDomain: "project-3581597108634898842.firebaseapp.com",
+        databaseURL: "https://project-3581597108634898842-default-rtdb.firebaseio.com",
+        projectId: "project-3581597108634898842",
+        storageBucket: "project-3581597108634898842.appspot.com",
+        messagingSenderId: "515198461310",
+        appId: "1:515198461310:web:669965673754c238d9ff2f",
+        measurementId: "G-YZKKLKF06N"
+      };
+
+      // 初始化 Firebase
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+      const database = getDatabase(app);
+      const provider = new GoogleAuthProvider();
+
+      // 註冊會員
+      document.getElementById("registerBtn").addEventListener("click", async () => {
+        try {
+          const result = await signInWithPopup(auth, provider);
+          const user = result.user;
+
+          // 收集會員資訊
+          const userData = {
+            name: user.displayName,
+            email: user.email,
+            profilePic: user.photoURL,
+            lastLogin: new Date().toISOString()
+          };
+
+          // 寫入 Realtime Database
+          set(ref(database, `users/${user.uid}`), userData);
+
+          alert("註冊成功！");
+          displayUserInfo(userData);
+        } catch (error) {
+          console.error("註冊失敗:", error);
+          alert("註冊失敗，請再試一次！");
+        }
+      });
+
+      // 登入會員
+      document.getElementById("loginBtn").addEventListener("click", async () => {
+        try {
+          const result = await signInWithPopup(auth, provider);
+          const user = result.user;
+
+          // 更新最後登入時間
+          const lastLogin = new Date().toISOString();
+          const userRef = ref(database, `users/${user.uid}`);
+          const snapshot = await get(userRef);
+
+          if (snapshot.exists()) {
+            // 更新最後登入時間
+            update(userRef, { lastLogin });
+            const userData = { ...snapshot.val(), lastLogin };
+            alert("登入成功！");
+            displayUserInfo(userData);
+          } else {
+            alert("帳號尚未註冊，請先註冊！");
+          }
+        } catch (error) {
+          console.error("登入失敗:", error);
+          alert("登入失敗，請再試一次！");
+        }
+      });
+
+      // 顯示會員資訊
+      function displayUserInfo(userData) {
+        document.getElementById("name").innerText = userData.name;
+        document.getElementById("email").innerText = userData.email;
+        document.getElementById("lastLogin").innerText = userData.lastLogin;
+        document.getElementById("profilePic").src = userData.profilePic;
+        document.getElementById("userInfo").style.display = "block";
+      }
+    </script>
+</body>
+</html>
